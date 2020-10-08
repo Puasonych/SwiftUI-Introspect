@@ -6,7 +6,7 @@ import AppKit
 import UIKit
 #endif
 
-@available(iOS 13.0, tvOS 13.0, macOS 15.0, *)
+@available(iOS 13.0, tvOS 13.0, macOS 10.15, *)
 extension View {
     public func inject<SomeView>(_ view: SomeView) -> some View where SomeView: View {
         return overlay(view.frame(width: 0, height: 0))
@@ -14,7 +14,7 @@ extension View {
 }
 
 #if canImport(UIKit)
-@available(iOS 13.0, tvOS 13.0, macOS 15.0, *)
+@available(iOS 13.0, tvOS 13.0, macOS 10.15, *)
 extension View {
     
     /// Finds a `TargetView` from a `SwiftUI.View`
@@ -52,6 +52,25 @@ extension View {
             customize: customize
         ))
     }
+    
+    /// Finds the containing `UISplitViewController` of a SwiftUI view.
+    public func introspectSplitViewController(customize: @escaping (UISplitViewController) -> ()) -> some View {
+        return inject(UIKitIntrospectionViewController(
+            selector: { introspectionViewController in
+                
+                // Search in ancestors
+                if let navigationController = introspectionViewController.navigationController {
+                    return navigationController.parent as? UISplitViewController
+                }
+                
+                // Search in siblings
+                return Introspect
+                    .previousSibling(containing: UINavigationController.self, from: introspectionViewController)?
+                    .parent as? UISplitViewController
+            },
+            customize: customize
+        ))
+    }
 
     /// Finds a `UITabBarController` from any SwiftUI view embedded in a `SwiftUI.TabView`
     public func introspectTabBarController(customize: @escaping (UITabBarController) -> ()) -> some View {
@@ -77,6 +96,11 @@ extension View {
     
     /// Finds a `UIScrollView` from a `SwiftUI.ScrollView`, or `SwiftUI.ScrollView` child.
     public func introspectScrollView(customize: @escaping (UIScrollView) -> ()) -> some View {
+        return introspect(selector: TargetViewSelector.ancestorOrSibling, customize: customize)
+    }
+    
+    /// Finds a `UITableViewCell` from a `SwiftUI.List` child.
+    public func introspectTableViewCell(customize: @escaping (UITableViewCell) -> ()) -> some View {
         return introspect(selector: TargetViewSelector.ancestorOrSibling, customize: customize)
     }
     
@@ -117,7 +141,7 @@ extension View {
 #endif
 
 #if canImport(AppKit) && !targetEnvironment(macCatalyst)
-@available(macOS 15.0, *)
+@available(macOS 10.15, *)
 extension View {
     
     /// Finds a `TargetView` from a `SwiftUI.View`
